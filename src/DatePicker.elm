@@ -296,7 +296,7 @@ Have a look at the `nightwash-simple` example for basic error handling with `Inp
 type DateEvent
     = None
     | FailedInput InputError
-    | Picked Date
+    | Picked (Maybe Date)
 
 
 {-| When typing a date it can go wrong in two ways:
@@ -329,7 +329,7 @@ update settings msg (DatePicker ({ forceOpen, focused } as model)) =
                     , inputText = Nothing
                     , focused = Nothing
                 }
-            , Picked date
+            , Picked (Just date)
             )
 
         Text text ->
@@ -343,16 +343,24 @@ update settings msg (DatePicker ({ forceOpen, focused } as model)) =
                 False ->
                     let
                         dateEvent =
-                            case settings.parser <| Maybe.withDefault "" model.inputText of
-                                Ok date ->
-                                    if settings.isDisabled date then
-                                        FailedInput <| Disabled date
+                            case model.inputText of
+                                Nothing ->
+                                    Picked Nothing
 
-                                    else
-                                        Picked date
+                                Just "" ->
+                                    Picked Nothing
 
-                                Err e ->
-                                    FailedInput <| Invalid e
+                                Just text ->
+                                    case settings.parser text of
+                                        Ok date ->
+                                            if settings.isDisabled date then
+                                                FailedInput (Disabled date)
+
+                                            else
+                                                Picked (Just date)
+
+                                        Err e ->
+                                            FailedInput (Invalid e)
                     in
                     ( DatePicker
                         { model
@@ -366,7 +374,7 @@ update settings msg (DatePicker ({ forceOpen, focused } as model)) =
                             , focused =
                                 case dateEvent of
                                     Picked date ->
-                                        Just date
+                                        date
 
                                     _ ->
                                         model.focused
